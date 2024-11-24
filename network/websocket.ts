@@ -12,7 +12,7 @@ export class Connection {
   }
 
   connect() {
-    return this.createWebSocket("ws://localhost:8080/");
+    return this.createWebSocket("ws://192.168.50.107:8080/");
   }
 
   reconnect() {
