@@ -4,7 +4,7 @@ import { Connection } from "../websocket";
 describe("websocket connection", () => {
   it("should implement connect", () => {
     const connection = new Connection({ createWebSocket: createWebSocketMock });
-    expect(connection.ws?.url).toBe("ws://localhost:8080/");
+    expect(connection.ws?.url).toBe("ws://192.168.50.107:8080/");
   });
   it('should register on error handler', () => {
     const connection = new Connection({ createWebSocket: createWebSocketMock });
