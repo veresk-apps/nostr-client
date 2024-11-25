@@ -5,6 +5,8 @@ import { createWebSocketMock } from "@/utils/test-utils";
 import { act } from "react";
 import { KeyPair } from "@/utils/key-pair";
 import { DeviceStotage } from "@/utils/key-store";
+import { createGenericEvent, EventKind, signEvent } from "@/utils/events";
+import { createMessage, MessageType } from "@/network/messages";
 
 interface RenderIndexProps {
   createConnection?: () => ConnectionMock;
@@ -41,14 +43,14 @@ describe("Index", () => {
   });
 
   it("should render 'Connected' if connectio status is open", async () => {
-    const connection = new ConnectionMock({ status: "open" })
+    const connection = new ConnectionMock({ status: "open" });
     const createConnection = () => connection;
     renderIndex({ createConnection });
     await screen.findByText("Connected");
   });
 
   it("should render 'Connected' after connection is open", async () => {
-    const connection = new ConnectionMock({ status: "closed" })
+    const connection = new ConnectionMock({ status: "closed" });
     const createConnection = () => connection;
     renderIndex({ createConnection });
     screen.getByText("Disconnected");
@@ -79,11 +81,24 @@ describe("Index", () => {
     expect(connection.onClose).toHaveBeenCalled();
   });
 
-  it("should call connection.send on send button click", async () => {
+  it("should send an event on send button click", async () => {
     const { connection } = renderIndex();
     await screen.findByText("Public key: genrtd");
     await userEvent.press(screen.getByText("Send"));
-    expect(connection.send).toHaveBeenCalledWith("hello, world from ios");
+    const event = createGenericEvent({
+      kind: EventKind.TextNote,
+      pubkey: "genrtd-pubkey",
+      content: "hello, world from ios",
+    });
+    const signedEvent = await signEvent({
+      event,
+      privateKey: new Uint8Array(),
+    });
+    const eventMessage = createMessage({
+      signedEvent,
+      type: MessageType.Event,
+    });
+    expect(connection.send).toHaveBeenCalledWith(eventMessage);
   });
 
   it("should display public key", async () => {

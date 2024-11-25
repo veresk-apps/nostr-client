@@ -5,6 +5,8 @@ import { KeyPair } from "@/utils/key-pair";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View, Platform } from "react-native";
 import * as keyStore from "@/utils/key-store";
+import { createGenericEvent, EventKind, signEvent } from "@/utils/events";
+import { createMessage, MessageType } from "@/network/messages";
 
 interface Props {
   createConnection?: () => Connection;
@@ -70,7 +72,12 @@ export default function Index({
       <View style={styles.main}>
         <Button
           label="Send"
-          onPress={() => connection.send("hello, world from " + Platform.OS)}
+          onPress={() =>
+            keyPair && buildMessage({
+              content: "hello, world from " + Platform.OS,
+              keyPair,
+            }).then(message => connection.send(message))
+          }
         />
       </View>
     </View>
@@ -93,3 +100,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
+
+async function buildMessage({
+  keyPair,
+  content,
+}: {
+  keyPair: KeyPair;
+  content: string;
+}) {
+  const event = createGenericEvent({
+    kind: EventKind.TextNote,
+    pubkey: keyPair.publicKeyHex,
+    content,
+  });
+  const signedEvent = await signEvent({
+    event,
+    privateKey: keyPair.privateKey,
+  });
+  const eventMessage = createMessage({
+    signedEvent,
+    type: MessageType.Event,
+  });
+  return eventMessage;
+}
