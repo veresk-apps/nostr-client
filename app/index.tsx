@@ -1,24 +1,27 @@
 import Button from "@/components/Button";
 import { Connection, createWebSocket } from "@/network/websocket";
-import * as keyPairUtils from "@/utils/key-pair";
+import * as keyPair from "@/utils/key-pair";
 import { KeyPair } from "@/utils/key-pair";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View, Platform } from "react-native";
-import { DeviceStotage, MobileStorage, WebStorage } from "@/utils/key-store";
+import * as keyStore from "@/utils/key-store";
 
 interface Props {
-  connection?: Connection;
+  createConnection?: () => Connection;
   generateKeyPair?: () => KeyPair;
   restoreKeyPair?: (privateKeyHex: string) => KeyPair;
-  deviceStore?: DeviceStotage;
+  createDeviceStore?: () => keyStore.DeviceStotage;
 }
 
 export default function Index({
-  connection = new Connection({ createWebSocket }),
-  generateKeyPair = keyPairUtils.generateKeyPair,
-  restoreKeyPair = keyPairUtils.restoreKeyPair,
-  deviceStore = Platform.OS == "web" ? new WebStorage() : new MobileStorage(),
+  createConnection = () => new Connection({ createWebSocket }),
+  generateKeyPair = keyPair.generateKeyPair,
+  restoreKeyPair = keyPair.restoreKeyPair,
+  createDeviceStore = keyStore.createDeviceStore,
 }: Props) {
+  const [connection] = useState(createConnection);
+  const [deviceStore] = useState(createDeviceStore);
+
   const [connected, setConnected] = useState(false);
   const [keyPair, setKeyPair] = useState<KeyPair | null>(generateKeyPair());
 
@@ -34,10 +37,14 @@ export default function Index({
   }
 
   useEffect(() => {
-    setupKeyPair().catch(console.error);
+    setupKeyPair()
+      .then(() => {
+        // somehow android opens connection before onOpen callback is registered
+        setConnected(connection.status == "open");
+      })
+      .catch(console.error);
 
     connection.onOpen(() => {
-      console.log("ON OPEN");
       setConnected(true);
     });
 
@@ -50,7 +57,6 @@ export default function Index({
     });
 
     connection.onClose(() => {
-      console.log("ON CLOSE");
       setConnected(false);
     });
   }, []);
@@ -58,7 +64,7 @@ export default function Index({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text>Public key: {keyPair.publicKeyHex.slice(0, 6)}</Text>
+        <Text>Public key: {keyPair?.publicKeyHex.slice(0, 6) ?? "......"}</Text>
         {connected ? <Text>Connected</Text> : <Text>Disconnected</Text>}
       </View>
       <View style={styles.main}>

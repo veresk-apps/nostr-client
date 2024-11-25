@@ -2,10 +2,12 @@ interface Params {
   createWebSocket: (url: string) => WebSocket;
 }
 
+export type ConnectionStatus = "open" | "closed";
+
 export class Connection {
   createWebSocket: (url: string) => WebSocket;
   ws: WebSocket;
-
+  
   constructor({ createWebSocket }: Params) {
     this.createWebSocket = createWebSocket;
     this.ws = this.connect();
@@ -19,7 +21,7 @@ export class Connection {
     this.ws = this.connect();
     this.registerExistingHanlers();
   }
-  
+
   registerExistingHanlers() {
     this.ws.onerror = this.errorHanlder;
     this.ws.onmessage = this.messageHanlder;
@@ -43,7 +45,6 @@ export class Connection {
     this.ws.onmessage = cb;
   }
 
-
   openHanlder: () => void = () => {};
   onOpen(cb: () => void) {
     this.openHanlder = cb;
@@ -54,6 +55,15 @@ export class Connection {
   onClose(cb: (event: CloseEvent) => void) {
     this.closeHanlder = cb;
     this.ws.onclose = cb;
+  }
+
+  get status(): ConnectionStatus {
+    switch (this.ws?.readyState) {
+      case WebSocket.OPEN:
+        return "open";
+      default:
+        return "closed";
+    }
   }
 }
 

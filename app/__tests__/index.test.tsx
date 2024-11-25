@@ -1,27 +1,31 @@
 import { render, screen, userEvent } from "@testing-library/react-native";
 import Index from "../index";
-import { Connection } from "@/network/websocket";
+import { Connection, ConnectionStatus } from "@/network/websocket";
 import { createWebSocketMock } from "@/utils/test-utils";
 import { act } from "react";
 import { KeyPair } from "@/utils/key-pair";
 import { DeviceStotage } from "@/utils/key-store";
 
-function renderIndex({
-  generateKeyPair = generateKeyPairMock,
-  restoreKeyPair = restoreKeyPairMock,
-  deviceStorage = new DeviceStoreMock(),
-}: {
+interface RenderIndexProps {
+  createConnection?: () => ConnectionMock;
   generateKeyPair?: () => KeyPair;
   restoreKeyPair?: () => KeyPair;
   deviceStorage?: DeviceStotage;
-} = {}) {
-  const connection = new ConnectionMock();
+}
+
+function renderIndex({
+  createConnection = () => new ConnectionMock(),
+  generateKeyPair = generateKeyPairMock,
+  restoreKeyPair = restoreKeyPairMock,
+  deviceStorage = new DeviceStoreMock(),
+}: RenderIndexProps = {}) {
+  const connection = createConnection();
   render(
     <Index
-      connection={connection}
+      createConnection={() => connection}
       generateKeyPair={generateKeyPair}
       restoreKeyPair={restoreKeyPair}
-      deviceStore={deviceStorage}
+      createDeviceStore={() => deviceStorage}
     />
   );
   return { connection, deviceStorage };
@@ -36,8 +40,17 @@ describe("Index", () => {
     jest.restoreAllMocks();
   });
 
+  it("should render 'Connected' if connectio status is open", async () => {
+    const connection = new ConnectionMock({ status: "open" })
+    const createConnection = () => connection;
+    renderIndex({ createConnection });
+    await screen.findByText("Connected");
+  });
+
   it("should render 'Connected' after connection is open", async () => {
-    const { connection } = renderIndex();
+    const connection = new ConnectionMock({ status: "closed" })
+    const createConnection = () => connection;
+    renderIndex({ createConnection });
     screen.getByText("Disconnected");
     act(() => {
       connection.handlers.simulateOpen();
@@ -59,7 +72,7 @@ describe("Index", () => {
 
   it("should call connection handlers", async () => {
     const { connection } = renderIndex();
-    await screen.findByText("Public key: genrtd")
+    await screen.findByText("Public key: genrtd");
     expect(connection.onOpen).toHaveBeenCalled();
     expect(connection.onMessage).toHaveBeenCalled();
     expect(connection.onError).toHaveBeenCalled();
@@ -68,19 +81,19 @@ describe("Index", () => {
 
   it("should call connection.send on send button click", async () => {
     const { connection } = renderIndex();
-    await screen.findByText("Public key: genrtd")
+    await screen.findByText("Public key: genrtd");
     await userEvent.press(screen.getByText("Send"));
     expect(connection.send).toHaveBeenCalledWith("hello, world from ios");
   });
 
   it("should display public key", async () => {
     renderIndex();
-    await screen.findByText("Public key: genrtd")
+    await screen.findByText("Public key: genrtd");
   });
 
   it("should save generated private key hex in device storage", async () => {
     const { deviceStorage } = renderIndex();
-    await screen.findByText("Public key: genrtd")
+    await screen.findByText("Public key: genrtd");
     expect(await deviceStorage.get("nsec")).toBe("genrtd-privatekey");
   });
 
@@ -88,13 +101,15 @@ describe("Index", () => {
     const deviceStorage = new DeviceStoreMock();
     deviceStorage.set("nsec", "stored-private-key-hex");
     renderIndex({ deviceStorage });
-    await screen.findByText("Public key: restrd")
+    await screen.findByText("Public key: restrd");
   });
 });
 
 class ConnectionMock extends Connection {
-  constructor() {
+  _status: ConnectionStatus;
+  constructor({ status = "open" }: { status?: ConnectionStatus } = {}) {
     super({ createWebSocket: createWebSocketMock });
+    this._status = status;
   }
   handlers = {
     simulateOpen: () => {},
@@ -109,6 +124,9 @@ class ConnectionMock extends Connection {
   onClose = jest.fn((cb: any) => {
     this.handlers.simulateClose = cb;
   });
+  get status() {
+    return this._status;
+  }
 }
 
 function generateKeyPairMock(): KeyPair {

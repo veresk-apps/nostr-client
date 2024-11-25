@@ -4,7 +4,8 @@ import { Connection } from "../websocket";
 describe("websocket connection", () => {
   it("should implement connect", () => {
     const connection = new Connection({ createWebSocket: createWebSocketMock });
-    expect(connection.ws?.url).toBe("ws://192.168.50.107:8080/");
+    const ws = connection.connect();
+    expect(ws.url).toBe("ws://192.168.50.107:8080/");
   });
   it('should register on error handler', () => {
     const connection = new Connection({ createWebSocket: createWebSocketMock });
@@ -52,5 +53,20 @@ describe("websocket connection", () => {
     connection.send("foo");
     expect(connection.ws.send).toHaveBeenCalledWith("foo")
   });
+
+  it('should have status open if connection in ready state opened', () => {
+    const connection = new Connection({ createWebSocket: () => ({
+      readyState: WebSocket.OPEN
+    }) as WebSocket});
+    connection.connect();
+    expect(connection.status).toBe("open")
+  });
+
+  it('should have status open if connection in ready state opened', () => {
+    const connection = new Connection({ createWebSocket: () => ({
+      readyState: WebSocket.CLOSED
+    }) as WebSocket});
+    expect(connection.status).toBe("closed")
+  })
 
 });
