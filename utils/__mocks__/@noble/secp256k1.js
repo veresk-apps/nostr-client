@@ -8,4 +8,5 @@ export function getPublicKey() {
 
 export const etc = {
   bytesToHex: () => "abc",
+  hexToBytes: () => new Uint8Array,
 };

@@ -4,19 +4,34 @@ import { Connection } from "@/network/websocket";
 import { createWebSocketMock } from "@/utils/test-utils";
 import { act } from "react";
 import { KeyPair } from "@/utils/key-pair";
+import { DeviceStotage } from "@/utils/key-store";
 
 function renderIndex({
   generateKeyPair = generateKeyPairMock,
-}: { generateKeyPair?: () => KeyPair } = {}) {
+  restoreKeyPair = restoreKeyPairMock,
+  deviceStorage = new DeviceStoreMock(),
+}: {
+  generateKeyPair?: () => KeyPair;
+  restoreKeyPair?: () => KeyPair;
+  deviceStorage?: DeviceStotage;
+} = {}) {
   const connection = new ConnectionMock();
-  render(<Index connection={connection} generateKeyPair={generateKeyPair} />);
-  return { connection };
+  render(
+    <Index
+      connection={connection}
+      generateKeyPair={generateKeyPair}
+      restoreKeyPair={restoreKeyPair}
+      deviceStore={deviceStorage}
+    />
+  );
+  return { connection, deviceStorage };
 }
 
 describe("Index", () => {
   beforeAll(() => {
     jest.spyOn(console, "log").mockImplementation(jest.fn());
   });
+
   afterAll(() => {
     jest.restoreAllMocks();
   });
@@ -27,7 +42,7 @@ describe("Index", () => {
     act(() => {
       connection.handlers.simulateOpen();
     });
-    screen.getByText("Connected");
+    await screen.findByText("Connected");
   });
 
   it("should render 'Disconnected' after connection closes", async () => {
@@ -35,15 +50,16 @@ describe("Index", () => {
     act(() => {
       connection.handlers.simulateOpen();
     });
-    screen.getByText("Connected");
+    await screen.findByText("Connected");
     act(() => {
       connection.handlers.simulateClose();
     });
-    screen.getByText("Disconnected");
+    await screen.findByText("Disconnected");
   });
 
   it("should call connection handlers", async () => {
     const { connection } = renderIndex();
+    await screen.findByText("Public key: genrtd")
     expect(connection.onOpen).toHaveBeenCalled();
     expect(connection.onMessage).toHaveBeenCalled();
     expect(connection.onError).toHaveBeenCalled();
@@ -52,13 +68,27 @@ describe("Index", () => {
 
   it("should call connection.send on send button click", async () => {
     const { connection } = renderIndex();
+    await screen.findByText("Public key: genrtd")
     await userEvent.press(screen.getByText("Send"));
     expect(connection.send).toHaveBeenCalledWith("hello, world from ios");
   });
 
   it("should display public key", async () => {
     renderIndex();
-    screen.getByText(`Public key: pubkey`);
+    await screen.findByText("Public key: genrtd")
+  });
+
+  it("should save generated private key hex in device storage", async () => {
+    const { deviceStorage } = renderIndex();
+    await screen.findByText("Public key: genrtd")
+    expect(await deviceStorage.get("nsec")).toBe("genrtd-privatekey");
+  });
+
+  it("should get private key hex from device storage", async () => {
+    const deviceStorage = new DeviceStoreMock();
+    deviceStorage.set("nsec", "stored-private-key-hex");
+    renderIndex({ deviceStorage });
+    await screen.findByText("Public key: restrd")
   });
 });
 
@@ -83,6 +113,24 @@ class ConnectionMock extends Connection {
 
 function generateKeyPairMock(): KeyPair {
   return {
-    publicKeyHex: 'pubkey123456'
+    publicKeyHex: "genrtd-pubkey",
+    privateKeyHex: "genrtd-privatekey",
   } as KeyPair;
+}
+
+function restoreKeyPairMock(): KeyPair {
+  return {
+    publicKeyHex: "restrd-pubkey",
+    privateKeyHex: "restrd-privatekey",
+  } as KeyPair;
+}
+
+class DeviceStoreMock implements DeviceStotage {
+  store = new Map();
+  async set(key: string, value: string) {
+    this.store.set(key, value);
+  }
+  async get(key: string) {
+    return this.store.get(key);
+  }
 }

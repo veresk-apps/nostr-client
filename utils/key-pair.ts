@@ -10,6 +10,11 @@ export function generateKeyPair() {
   return new KeyPair({ privateKey });
 }
 
+export function restoreKeyPair(privateKeyHex: string) {
+  const privateKey = secp.etc.hexToBytes(privateKeyHex);
+  return new KeyPair({ privateKey });
+}
+
 export class KeyPair {
   privateKey: Uint8Array;
   publicKey: Uint8Array;

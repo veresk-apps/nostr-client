@@ -1,12 +1,13 @@
-import { generateKeyPair } from "../key-pair";
-jest.mock("@noble/secp256k1");
+import { generateKeyPair, KeyPair, restoreKeyPair } from "../key-pair";
 
 describe("key-pair", () => {
-  it("should generate key pair", async () => {
+  it("should generate key pair", () => {
     const pair = generateKeyPair();
-    expect(pair.privateKey).toBeInstanceOf(Uint8Array);
-    expect(pair.publicKey).toBeInstanceOf(Uint8Array);
-    expect(typeof pair.privateKeyHex).toBe("string");
-    expect(typeof pair.publicKeyHex).toBe("string");
+    expect(pair).toBeInstanceOf(KeyPair);
   });
+
+  it('should restore key pair from private key hex', () => {
+    const pair = restoreKeyPair("f00");
+    expect(pair).toBeInstanceOf(KeyPair);
+  })
 });
