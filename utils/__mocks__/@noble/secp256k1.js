@@ -6,7 +6,11 @@ export function getPublicKey() {
   return new Uint8Array();
 }
 
+export async function signAsync() {
+  return { toCompactHex: () => "some-sig" };
+}
+
 export const etc = {
-  bytesToHex: () => "abc",
-  hexToBytes: () => new Uint8Array,
+  bytesToHex: () => "some-hash",
+  hexToBytes: () => new Uint8Array(),
 };
