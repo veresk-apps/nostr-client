@@ -2,7 +2,7 @@ import Button from "@/components/Button";
 import { Connection, createWebSocket } from "@/network/websocket";
 import * as keyPair from "@/utils/key-pair";
 import { KeyPair } from "@/utils/key-pair";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View, Platform } from "react-native";
 import * as keyStore from "@/utils/key-store";
 

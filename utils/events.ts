@@ -32,7 +32,7 @@ export function createGenericEvent({
   };
 }
 
-type SignedGenericEvent = GenericEvent & { id: string; sig: string };
+export type SignedGenericEvent = GenericEvent & { id: string; sig: string };
 
 export async function signEvent({
   event,
